@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: auth-system
+    runtime: php
+    startCommand: ./start.sh
+    envVars:
+      - key: DB_HOST
+        value: dpg-cvfi2jdsvqrc73d1smig-a
+      - key: DB_USERNAME
+        value: auth_database_7zod_user
+      - key: DB_PASSWORD
+        value: bce9EugCZQutsSveRgHybEMKZCvvv8HA
+      - key: DB_NAME
+        value: auth-database
