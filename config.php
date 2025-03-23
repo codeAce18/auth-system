@@ -1,15 +1,23 @@
 <?php
-// config.php - Database configuration
-$host = "localhost";
-$db_user = "root"; // default XAMPP username
-$db_pass = ""; // default XAMPP password is empty
-$db_name = "user_auth";
+// config.php - Database configuration for PostgreSQL
+$host = "dpg-cvfi2jdsvqrc73d1smig-a.oregon-postgres.render.com"; // Render database hostname
+$db_user = "auth_database_7zod_user"; // Render database username
+$db_pass = "bce9EugCZQutsSveRgHybEMKZCvvv8HA"; // Render database password
+$db_name = "auth_database_7zod"; // Render database name
+$port = 5432; // Default PostgreSQL port
 
-// Create connection
-$conn = new mysqli($host, $db_user, $db_pass, $db_name);
+try {
+    // DSN (Data Source Name)
+    $dsn = "pgsql:host=$host;port=$port;dbname=$db_name";
 
-// Check connection
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
+    // Create a new PDO instance
+    $conn = new PDO($dsn, $db_user, $db_pass);
+
+    // Set error mode to exception for better error handling
+    $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+    echo "Connected to PostgreSQL database successfully!";
+} catch (PDOException $e) {
+    die("Connection failed: " . $e->getMessage());
 }
 ?>
