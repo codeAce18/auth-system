@@ -20,14 +20,14 @@ $response = array('success' => false, 'message' => '');
 
 // Process form submission
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    // Get form data - handle both form data and JSON
+    // Get form data - handle both form-data and JSON
     $contentType = isset($_SERVER["CONTENT_TYPE"]) ? $_SERVER["CONTENT_TYPE"] : '';
-    
+
     if (strpos($contentType, 'application/json') !== false) {
         // Handle JSON request body
         $json = file_get_contents('php://input');
         $data = json_decode($json, true);
-        
+
         $email = isset($data['email']) ? trim($data['email']) : '';
         $password = isset($data['password']) ? trim($data['password']) : '';
     } else {
@@ -35,46 +35,44 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $email = isset($_POST['email']) ? trim($_POST['email']) : '';
         $password = isset($_POST['password']) ? trim($_POST['password']) : '';
     }
-    
+
     // Basic validation
     if (empty($email) || empty($password)) {
         $response['message'] = "Both email and password are required";
     } else {
-        // Prepare SQL statement
-        $stmt = $conn->prepare("SELECT id, username, password FROM users WHERE email = ?");
-        $stmt->bind_param("s", $email);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        
-        if ($result->num_rows === 1) {
-            $user = $result->fetch_assoc();
-            
-            // Verify password
-            if (password_verify($password, $user['password'])) {
-                // Password is correct, start a new session
-                session_start();
-                
-                // Store data in session variables
-                $_SESSION["loggedin"] = true;
-                $_SESSION["id"] = $user["id"];
-                $_SESSION["username"] = $user["username"];
-                
-                $response['success'] = true;
-                $response['message'] = "Login successful";
-                $response['username'] = $user["username"];
-                $response['redirect'] = "/"; // For React Router
+        try {
+            // Prepare SQL statement
+            $stmt = $pdo->prepare("SELECT id, username, password FROM users WHERE email = :email");
+            $stmt->bindParam(":email", $email);
+            $stmt->execute();
+
+            if ($stmt->rowCount() === 1) {
+                $user = $stmt->fetch();
+
+                // Verify password
+                if (password_verify($password, $user['password'])) {
+                    // Start session
+                    session_start();
+                    
+                    // Store user data in session
+                    $_SESSION["loggedin"] = true;
+                    $_SESSION["id"] = $user["id"];
+                    $_SESSION["username"] = $user["username"];
+
+                    $response['success'] = true;
+                    $response['message'] = "Login successful";
+                    $response['username'] = $user["username"];
+                    $response['redirect'] = "/"; // Redirect path for React Router
+                } else {
+                    $response['message'] = "Invalid password";
+                }
             } else {
-                $response['message'] = "Invalid password";
+                $response['message'] = "No account found with that email";
             }
-        } else {
-            $response['message'] = "No account found with that email";
+        } catch (PDOException $e) {
+            $response['message'] = "Database error: " . $e->getMessage();
         }
-        
-        $stmt->close();
     }
-    
-    // Close connection
-    $conn->close();
 }
 
 // Return JSON response

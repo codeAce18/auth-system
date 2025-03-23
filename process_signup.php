@@ -12,7 +12,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
 }
 
 // Database connection
-require_once 'config.php';
+require_once 'config.php';  // Ensure config.php uses PDO
 header('Content-Type: application/json');
 
 // Initialize response array
@@ -22,12 +22,12 @@ $response = array('success' => false, 'message' => '');
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // Get form data - handle both form data and JSON
     $contentType = isset($_SERVER["CONTENT_TYPE"]) ? $_SERVER["CONTENT_TYPE"] : '';
-    
+
     if (strpos($contentType, 'application/json') !== false) {
         // Handle JSON request body
         $json = file_get_contents('php://input');
         $data = json_decode($json, true);
-        
+
         $username = isset($data['username']) ? trim($data['username']) : '';
         $email = isset($data['email']) ? trim($data['email']) : '';
         $password = isset($data['password']) ? trim($data['password']) : '';
@@ -37,44 +37,42 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $email = isset($_POST['email']) ? trim($_POST['email']) : '';
         $password = isset($_POST['password']) ? trim($_POST['password']) : '';
     }
-    
+
     // Basic validation
     if (empty($username) || empty($email) || empty($password)) {
         $response['message'] = "All fields are required";
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $response['message'] = "Invalid email format";
     } else {
-        // Check if email already exists
-        $stmt = $conn->prepare("SELECT id FROM users WHERE email = ?");
-        $stmt->bind_param("s", $email);
-        $stmt->execute();
-        $stmt->store_result();
-        
-        if ($stmt->num_rows > 0) {
-            $response['message'] = "Email already exists. Please use a different email.";
-            $stmt->close();
-        } else {
-            $stmt->close();
-            
-            // Hash the password
-            $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-            
-            // Insert new user
-            $stmt = $conn->prepare("INSERT INTO users (username, email, password) VALUES (?, ?, ?)");
-            $stmt->bind_param("sss", $username, $email, $hashed_password);
-            
-            if ($stmt->execute()) {
-                $response['success'] = true;
-                $response['message'] = "Registration successful! You can now login.";
+        try {
+            // Check if email already exists
+            $stmt = $pdo->prepare("SELECT id FROM users WHERE email = :email");
+            $stmt->bindParam(":email", $email);
+            $stmt->execute();
+
+            if ($stmt->rowCount() > 0) {  
+                $response['message'] = "Email already exists. Please use a different email.";
             } else {
-                $response['message'] = "Error: " . $stmt->error;
+                // Hash the password
+                $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+
+                // Insert new user
+                $stmt = $pdo->prepare("INSERT INTO users (username, email, password) VALUES (:username, :email, :password)");
+                $stmt->bindParam(":username", $username);
+                $stmt->bindParam(":email", $email);
+                $stmt->bindParam(":password", $hashed_password);
+
+                if ($stmt->execute()) {
+                    $response['success'] = true;
+                    $response['message'] = "Registration successful! You can now login.";
+                } else {
+                    $response['message'] = "Error: " . implode(" ", $stmt->errorInfo());
+                }
             }
-            $stmt->close();
+        } catch (PDOException $e) {
+            $response['message'] = "Database error: " . $e->getMessage();
         }
     }
-    
-    // Close connection
-    $conn->close();
 }
 
 // Return JSON response
