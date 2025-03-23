@@ -2,7 +2,7 @@
 header("Content-Type: application/json");
 
 // Allow requests from http://localhost:3001
-header("Access-Control-Allow-Origin: http://localhost:3000");
+header("Access-Control-Allow-Origin: https://h4-porn.vercel.app");
 
 // Allow credentials (cookies, authorization headers)
 header("Access-Control-Allow-Credentials: true");
