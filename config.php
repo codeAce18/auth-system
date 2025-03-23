@@ -1,15 +1,15 @@
 <?php
-// config.php - PostgreSQL database configuration
-$host = getenv('DB_HOST'); // Render will provide this
-$db_user = getenv('DB_USERNAME'); // Render will provide this
-$db_pass = getenv('DB_PASSWORD'); // Render will provide this
-$db_name = getenv('DB_NAME'); // Render will provide this
+// config.php - Database configuration
+$host = "localhost";
+$db_user = "root"; // default XAMPP username
+$db_pass = ""; // default XAMPP password is empty
+$db_name = "user_auth";
 
 // Create connection
-$conn = new PDO("pgsql:host=$host;dbname=$db_name", $db_user, $db_pass);
+$conn = new mysqli($host, $db_user, $db_pass, $db_name);
 
 // Check connection
-if (!$conn) {
-    die("Connection failed");
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
 }
 ?>
