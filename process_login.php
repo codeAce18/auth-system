@@ -2,7 +2,7 @@
 // process_login.php - With CORS support for React frontend
 
 // Enable CORS
-header("Access-Control-Allow-Origin: https://h4-porn.vercel.app"); // Replace * with your frontend URL in production
+header("Access-Control-Allow-Origin: https://h4-porn.vercel.app"); // Change to frontend URL in production
 header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type");
 
@@ -16,53 +16,44 @@ require_once 'config.php';
 header('Content-Type: application/json');
 
 // Initialize response array
-$response = array('success' => false, 'message' => '');
+$response = ['success' => false, 'message' => ''];
 
 // Process form submission
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
+if ($_SERVER["REQUEST_METHOD"] === "POST") {
     // Get form data - handle both form-data and JSON
-    $contentType = isset($_SERVER["CONTENT_TYPE"]) ? $_SERVER["CONTENT_TYPE"] : '';
+    $contentType = $_SERVER["CONTENT_TYPE"] ?? '';
 
-    if (strpos($contentType, 'application/json') !== false) {
-        // Handle JSON request body
-        $json = file_get_contents('php://input');
-        $data = json_decode($json, true);
-
-        $email = isset($data['email']) ? trim($data['email']) : '';
-        $password = isset($data['password']) ? trim($data['password']) : '';
+    if (stripos($contentType, 'application/json') !== false) {
+        $data = json_decode(file_get_contents('php://input'), true);
+        $email = trim($data['email'] ?? '');
+        $password = trim($data['password'] ?? '');
     } else {
-        // Handle form-data request body
-        $email = isset($_POST['email']) ? trim($_POST['email']) : '';
-        $password = isset($_POST['password']) ? trim($_POST['password']) : '';
+        $email = trim($_POST['email'] ?? '');
+        $password = trim($_POST['password'] ?? '');
     }
 
-    // Basic validation
-    if (empty($email) || empty($password)) {
+    // Validate input
+    if (!$email || !$password) {
         $response['message'] = "Both email and password are required";
     } else {
         try {
-            // Prepare SQL statement
-            $stmt = $pdo->prepare("SELECT id, username, password FROM users WHERE email = :email");
-            $stmt->bindParam(":email", $email);
+            $stmt = $conn->prepare("SELECT id, username, password FROM users WHERE email = :email");
+            $stmt->bindParam(":email", $email, PDO::PARAM_STR);
             $stmt->execute();
 
-            if ($stmt->rowCount() === 1) {
-                $user = $stmt->fetch();
-
-                // Verify password
+            if ($user = $stmt->fetch(PDO::FETCH_ASSOC)) {
                 if (password_verify($password, $user['password'])) {
-                    // Start session
                     session_start();
-                    
-                    // Store user data in session
                     $_SESSION["loggedin"] = true;
                     $_SESSION["id"] = $user["id"];
                     $_SESSION["username"] = $user["username"];
 
-                    $response['success'] = true;
-                    $response['message'] = "Login successful";
-                    $response['username'] = $user["username"];
-                    $response['redirect'] = "/"; // Redirect path for React Router
+                    $response = [
+                        'success' => true,
+                        'message' => "Login successful",
+                        'username' => $user["username"],
+                        'redirect' => "/"
+                    ];
                 } else {
                     $response['message'] = "Invalid password";
                 }

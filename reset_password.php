@@ -2,7 +2,7 @@
 // reset_password.php - With CORS support for React frontend
 
 // Enable CORS
-header("Access-Control-Allow-Origin: https://h4-porn.vercel.app"); // Replace * with your frontend URL in production
+header("Access-Control-Allow-Origin: https://h4-porn.vercel.app"); // Replace with frontend URL in production
 header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type");
 
@@ -16,94 +16,92 @@ require_once 'config.php';
 header('Content-Type: application/json');
 
 // Initialize response array
-$response = array('success' => false, 'message' => '');
+$response = ['success' => false, 'message' => ''];
 
-// Process form submission
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    // Get form data - handle both form data and JSON
-    $contentType = isset($_SERVER["CONTENT_TYPE"]) ? $_SERVER["CONTENT_TYPE"] : '';
-    
-    if (strpos($contentType, 'application/json') !== false) {
-        // Handle JSON request body
-        $json = file_get_contents('php://input');
-        $data = json_decode($json, true);
-        
-        $token = isset($data['token']) ? trim($data['token']) : '';
-        $password = isset($data['password']) ? trim($data['password']) : '';
-        $confirmPassword = isset($data['confirmPassword']) ? trim($data['confirmPassword']) : '';
-    } else {
-        // Handle form-data request body
-        $token = isset($_POST['token']) ? trim($_POST['token']) : '';
-        $password = isset($_POST['password']) ? trim($_POST['password']) : '';
-        $confirmPassword = isset($_POST['confirmPassword']) ? trim($_POST['confirmPassword']) : '';
-    }
-    
-    // Basic validation
-    if (empty($token) || empty($password) || empty($confirmPassword)) {
-        $response['message'] = "All fields are required";
-    } elseif ($password !== $confirmPassword) {
-        $response['message'] = "Passwords do not match";
-    } elseif (strlen($password) < 6) {
-        $response['message'] = "Password must be at least 6 characters long";
-    } else {
-        // Check if token exists and is not expired
-        $stmt = $conn->prepare("SELECT id FROM users WHERE reset_token = ? AND reset_token_expires > NOW()");
-        $stmt->bind_param("s", $token);
-        $stmt->execute();
-        $stmt->store_result();
-        
-        if ($stmt->num_rows == 0) {
-            $response['message'] = "Invalid or expired token. Please request a new password reset.";
+try {
+    if ($_SERVER["REQUEST_METHOD"] == "POST") {
+        // Get form data (handle both JSON and form-data)
+        $contentType = $_SERVER["CONTENT_TYPE"] ?? '';
+
+        if (strpos($contentType, 'application/json') !== false) {
+            // Handle JSON request body
+            $json = file_get_contents('php://input');
+            $data = json_decode($json, true);
         } else {
-            $stmt->bind_result($userId);
-            $stmt->fetch();
-            $stmt->close();
-            
-            // Hash the new password
-            $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-            
-            // Update password and clear reset token
-            $updateStmt = $conn->prepare("UPDATE users SET password = ?, reset_token = NULL, reset_token_expires = NULL WHERE id = ?");
-            $updateStmt->bind_param("si", $hashedPassword, $userId);
-            
-            if ($updateStmt->execute()) {
-                $response['success'] = true;
-                $response['message'] = "Password has been reset successfully. You can now log in with your new password.";
-            } else {
-                $response['message'] = "Error: " . $updateStmt->error;
-            }
-            $updateStmt->close();
+            // Handle form-data request body
+            $data = $_POST;
+        }
+
+        // Extract and sanitize inputs
+        $token = trim($data['token'] ?? '');
+        $password = trim($data['password'] ?? '');
+        $confirmPassword = trim($data['confirmPassword'] ?? '');
+
+        // Basic validation
+        if (empty($token) || empty($password) || empty($confirmPassword)) {
+            throw new Exception("All fields are required.");
+        }
+        if ($password !== $confirmPassword) {
+            throw new Exception("Passwords do not match.");
+        }
+        if (strlen($password) < 6) {
+            throw new Exception("Password must be at least 6 characters long.");
+        }
+
+        // Check if token exists and is still valid
+        $stmt = $conn->prepare("SELECT id FROM users WHERE reset_token = :token AND reset_token_expires > NOW()");
+        $stmt->bindParam(":token", $token);
+        $stmt->execute();
+
+        if ($stmt->rowCount() === 0) {
+            throw new Exception("Invalid or expired token. Please request a new password reset.");
+        }
+
+        // Fetch user ID
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        $userId = $user['id'];
+
+        // Hash the new password
+        $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+
+        // Update the user's password and clear reset token
+        $updateStmt = $conn->prepare("UPDATE users SET password = :password, reset_token = NULL, reset_token_expires = NULL WHERE id = :id");
+        $updateStmt->bindParam(":password", $hashedPassword);
+        $updateStmt->bindParam(":id", $userId);
+
+        if ($updateStmt->execute()) {
+            // Destroy any existing session to force logout after password reset
+            session_start();
+            session_destroy();
+
+            $response['success'] = true;
+            $response['message'] = "Password has been reset successfully. You can now log in with your new password.";
+        } else {
+            throw new Exception("Error updating password.");
         }
     }
-    
-    // Close connection
-    $conn->close();
-}
 
-// Verify token - for GET requests when user accesses the reset page
-if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['token'])) {
-    $token = trim($_GET['token']);
-    
-    if (empty($token)) {
-        $response['message'] = "Invalid token";
-    } else {
-        // Check if token exists and is not expired
-        $stmt = $conn->prepare("SELECT id FROM users WHERE reset_token = ? AND reset_token_expires > NOW()");
-        $stmt->bind_param("s", $token);
+    // Verify token for GET requests (when user accesses the reset page)
+    if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['token'])) {
+        $token = trim($_GET['token']);
+
+        if (empty($token)) {
+            throw new Exception("Invalid token.");
+        }
+
+        $stmt = $conn->prepare("SELECT id FROM users WHERE reset_token = :token AND reset_token_expires > NOW()");
+        $stmt->bindParam(":token", $token);
         $stmt->execute();
-        $stmt->store_result();
-        
-        if ($stmt->num_rows == 0) {
-            $response['message'] = "Invalid or expired token. Please request a new password reset.";
+
+        if ($stmt->rowCount() === 0) {
+            throw new Exception("Invalid or expired token. Please request a new password reset.");
         } else {
             $response['success'] = true;
-            $response['message'] = "Token is valid";
+            $response['message'] = "Token is valid.";
         }
-        $stmt->close();
     }
-    
-    // Close connection
-    $conn->close();
+} catch (Exception $e) {
+    $response['message'] = $e->getMessage();
 }
 
 // Return JSON response
