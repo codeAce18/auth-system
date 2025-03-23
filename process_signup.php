@@ -12,7 +12,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
 }
 
 // Database connection
-require_once 'config.php';  // Ensure config.php uses PDO
+require_once 'config.php';
 header('Content-Type: application/json');
 
 // Initialize response array
@@ -20,7 +20,6 @@ $response = array('success' => false, 'message' => '');
 
 // Process form submission
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    // Get form data - handle both form data and JSON
     $contentType = isset($_SERVER["CONTENT_TYPE"]) ? $_SERVER["CONTENT_TYPE"] : '';
 
     if (strpos($contentType, 'application/json') !== false) {
@@ -28,46 +27,41 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $json = file_get_contents('php://input');
         $data = json_decode($json, true);
 
-        $username = isset($data['username']) ? trim($data['username']) : '';
         $email = isset($data['email']) ? trim($data['email']) : '';
+        $username = isset($data['username']) ? trim($data['username']) : '';
         $password = isset($data['password']) ? trim($data['password']) : '';
     } else {
         // Handle form-data request body
-        $username = isset($_POST['username']) ? trim($_POST['username']) : '';
         $email = isset($_POST['email']) ? trim($_POST['email']) : '';
+        $username = isset($_POST['username']) ? trim($_POST['username']) : '';
         $password = isset($_POST['password']) ? trim($_POST['password']) : '';
     }
 
-    // Basic validation
-    if (empty($username) || empty($email) || empty($password)) {
-        $response['message'] = "All fields are required";
-    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $response['message'] = "Invalid email format";
+    // Validate input
+    if (empty($email) || empty($username) || empty($password)) {
+        $response['message'] = "All fields are required.";
     } else {
         try {
             // Check if email already exists
-            $stmt = $pdo->prepare("SELECT id FROM users WHERE email = :email");
+            $stmt = $conn->prepare("SELECT id FROM users WHERE email = :email"); 
             $stmt->bindParam(":email", $email);
             $stmt->execute();
 
-            if ($stmt->rowCount() > 0) {  
-                $response['message'] = "Email already exists. Please use a different email.";
+            if ($stmt->rowCount() > 0) {
+                $response['message'] = "Email already exists.";
             } else {
-                // Hash the password
+                // Hash password
                 $hashed_password = password_hash($password, PASSWORD_DEFAULT);
 
                 // Insert new user
-                $stmt = $pdo->prepare("INSERT INTO users (username, email, password) VALUES (:username, :email, :password)");
-                $stmt->bindParam(":username", $username);
+                $stmt = $conn->prepare("INSERT INTO users (email, username, password) VALUES (:email, :username, :password)"); // ✅ Changed $pdo to $conn
                 $stmt->bindParam(":email", $email);
+                $stmt->bindParam(":username", $username);
                 $stmt->bindParam(":password", $hashed_password);
+                $stmt->execute();
 
-                if ($stmt->execute()) {
-                    $response['success'] = true;
-                    $response['message'] = "Registration successful! You can now login.";
-                } else {
-                    $response['message'] = "Error: " . implode(" ", $stmt->errorInfo());
-                }
+                $response['success'] = true;
+                $response['message'] = "Account created successfully!";
             }
         } catch (PDOException $e) {
             $response['message'] = "Database error: " . $e->getMessage();
