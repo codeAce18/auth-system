@@ -26,12 +26,9 @@ if ($_SESSION['user_id'] != $data['user_id']) {
     die(json_encode(['status' => 'error', 'message' => 'Forbidden']));
 }
 
-// Database connection
-$host = "dpg-cvfi2jdsvqrc73d1smig-a.oregon-postgres.render.com";
-$db_user = "auth_database_7zod_user";
-$db_pass = "bce9EugCZQutsSveRgHybEMKZCvvv8HA";
-$db_name = "auth_database_7zod";
-$port = 5432;
+// Include database configuration
+require_once 'config.php';
+
 
 try {
     // Get and validate JSON input
@@ -46,13 +43,6 @@ try {
     $videoId = (int)$data['video_id'];
     $duration = (int)$data['duration'];
     $awardedAt = $data['awarded_at'] ?? date('Y-m-d H:i:s');
-
-    // DSN (Data Source Name)
-    $dsn = "pgsql:host=$host;port=$port;dbname=$db_name";
-
-    // Create a new PDO instance
-    $conn = new PDO($dsn, $db_user, $db_pass);
-    $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
     // Calculate XP points (5 XP per 5 minutes)
     $xpPoints = floor($duration / 300) * 5;
@@ -91,5 +81,6 @@ try {
     ]);
 }
 
-$conn = null;
+// Note: Don't close the connection here since it was created in config.php
+// $conn = null; // Remove this line
 ?>
