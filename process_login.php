@@ -2,7 +2,7 @@
 // process_login.php - With CORS support for React frontend
 
 // Enable CORS
-header("Access-Control-Allow-Origin: https://h4-porn.vercel.app"); // Change to frontend URL in production
+header("Access-Control-Allow-Origin: https://h4-porn.vercel.app"); 
 header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type");
 
