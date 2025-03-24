@@ -1,5 +1,5 @@
 <?php
-// create_db.php - Script to create the database and users table
+// create_db.php - Script to create the database and tables
 // Run this script once to set up your database
 
 $host = "dpg-cvfi2jdsvqrc73d1smig-a.oregon-postgres.render.com"; // Render PostgreSQL hostname
@@ -26,11 +26,27 @@ try {
         username VARCHAR(50) NOT NULL,
         email VARCHAR(100) NOT NULL UNIQUE,
         password VARCHAR(255) NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        reset_token VARCHAR(255),
+        reset_token_expires TIMESTAMP,
+        xp_points INT DEFAULT 0
     )";
 
     $conn->exec($sql);
-    echo "Table 'users' created successfully";
+    echo "Table 'users' created successfully<br>";
+
+    // Create video_watch_logs table
+    $sql = "CREATE TABLE IF NOT EXISTS video_watch_logs (
+        id SERIAL PRIMARY KEY,
+        user_id INT REFERENCES users(id) ON DELETE CASCADE,
+        video_id INT,
+        start_time TIMESTAMP,
+        end_time TIMESTAMP,
+        duration INT -- Duration in seconds
+    )";
+
+    $conn->exec($sql);
+    echo "Table 'video_watch_logs' created successfully";
 
 } catch (PDOException $e) {
     echo "Error: " . $e->getMessage();
