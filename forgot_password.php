@@ -7,7 +7,7 @@ use PHPMailer\PHPMailer\Exception;
 require 'vendor/autoload.php'; 
 
 // Enable CORS
-header("Access-Control-Allow-Origin: https://h4-porn.vercel.app");
+header("Access-Control-Allow-Origin: https://h4-p.vercel.app");
 header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type");
 

@@ -3,7 +3,7 @@
 require_once 'config.php';
 
 // CORS Headers
-header("Access-Control-Allow-Origin: https://h4-porn.vercel.app");
+header("Access-Control-Allow-Origin: https://h4-p.vercel.app");
 header("Access-Control-Allow-Methods: POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type");
 header('Content-Type: application/json');

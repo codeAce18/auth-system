@@ -2,7 +2,7 @@
 // reset_password.php - With CORS support for React frontend
 
 // Enable CORS
-header("Access-Control-Allow-Origin: https://h4-porn.vercel.app"); // Replace with frontend URL in production
+header("Access-Control-Allow-Origin: https://h4-p.vercel.app"); // Replace with frontend URL in production
 header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type");
 
