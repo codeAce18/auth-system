@@ -2,6 +2,8 @@
 // Include database configuration
 require_once 'config.php';
 
+// track-video-interaction.php
+
 // CORS Headers
 header("Access-Control-Allow-Origin: https://h4-p.vercel.app");
 header("Access-Control-Allow-Methods: POST, OPTIONS");
